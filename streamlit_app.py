@@ -6,47 +6,58 @@ import google.generativeai as genai
 
 st.set_page_config(page_title="Strategisk Gemini-Rådgiver", layout="wide")
 
-# CSS til styling
-st.markdown("""
-<style>
-    .stChatMessage {
-        background-color: #f0f2f6;
-        border-radius: 10px;
-        padding: 10px;
-        margin-bottom: 10px;
-    }
-</style>
-""", unsafe_allow_html=True)
-
 st.title("♊ Strategisk Gemini-Chat")
 
 # --- SIDEBAR ---
 with st.sidebar:
     st.header("Indstillinger")
     google_api_key = st.text_input("Indsæt din Gemini API-nøgle:", type="password")
-    kommune_navn = st.selectbox("Vælg Kommune:", ["Hele landet", "København", "Aarhus", "Odense", "Aalborg"])
     st.info("Hent din gratis nøgle på aistudio.google.com")
 
-# --- DATA HENTNING ---
-kommuner = {"Hele landet": "000", "København": "101", "Aarhus": "751", "Odense": "461", "Aalborg": "851"}
+# --- DATA ---
+# Vi bruger faste tal direkte for at undgå API-fejl fra DST i denne test
+df = pd.DataFrame({
+    "Alder": ["0-6 aar", "7-16 aar", "17-24 aar", "25-44 aar", "45-66 aar", "67+ aar"],
+    "Antal": [450000, 650000, 600000, 1500000, 1600000, 1150000]
+})
 
-def hent_data(kode):
-    url = f"https://api.statbank.dk/v1/data/FOLK1A/CSV?OMRÅDE={kode}&ALDER=IALT,0-6,7-16,17-24,25-44,45-66,67+&Tid=2023K4"
-    try:
-        r = requests.get(url, timeout=5)
-        if r.status_code == 200:
-            df = pd.read_csv(io.StringIO(r.text), sep=';')
-            df.columns = ['Område', 'Aldersgruppe', 'Tid', 'Antal']
-            return df
-        return None
-    except:
-        return None
+# --- VISUALISERING ---
+col1, col2 = st.columns(2)
+with col1:
+    st.write("### Befolkningstal")
+    st.bar_chart(data=df, x="Alder", y="Antal")
+with col2:
+    st.write("### Data-tabel")
+    st.table(df)
 
-df = hent_data(kommuner[kommune_navn])
+st.divider()
 
-# Hvis DST driller, brug pæne test-tal uden specialtegn der kan give fejl
-if df is None:
-    st.warning("Info: DST serveren hviler sig. Vi bruger eksempel-tal lige nu.")
-    df = pd.DataFrame({
-        'Aldersgruppe': ["I alt", "0-6 aar", "7-16 aar", "17-24 aar", "25-44 aar", "45-66 aar", "67+ aar"],
-        'Antal': [6000000, 45000
+# --- CHAT ---
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
+
+if prompt := st.chat_input("Skriv dit spørgsmål..."):
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    with st.chat_message("user"):
+        st.markdown(prompt)
+
+    with st.chat_message("assistant"):
+        if not google_api_key:
+            st.error("Indsæt venligst din API-nøgle i venstre side.")
+        else:
+            try:
+                genai.configure(api_key=google_api_key)
+                # Vi bruger 'gemini-1.5-flash' som er den mest stabile lige nu
+                model = genai.GenerativeModel('gemini-1.5-flash')
+                
+                context = f"Her er data: {df.to_string()}. Svar kort på dansk."
+                response = model.generate_content([context, prompt])
+                
+                st.markdown(response.text)
+                st.session_state.messages.append({"role": "assistant", "content": response.text})
+            except Exception as e:
+                st.error("Kunne ikke forbinde til Gemini. Tjek om din nøgle er aktiv.")
