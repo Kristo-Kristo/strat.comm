@@ -6,7 +6,7 @@ import google.generativeai as genai
 
 st.set_page_config(page_title="Strategisk Gemini-Rådgiver", layout="wide")
 
-# CSS til at gøre chat-interfacet pænere
+# CSS til styling
 st.markdown("""
 <style>
     .stChatMessage {
@@ -19,7 +19,6 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 st.title("♊ Strategisk Gemini-Chat")
-st.subheader("Data fra DST + Intelligent AI-Rådgivning")
 
 # --- SIDEBAR ---
 with st.sidebar:
@@ -28,7 +27,7 @@ with st.sidebar:
     kommune_navn = st.selectbox("Vælg Kommune:", ["Hele landet", "København", "Aarhus", "Odense", "Aalborg"])
     st.info("Hent din gratis nøgle på aistudio.google.com")
 
-# --- DATA HENTNING (Skudsikker metode) ---
+# --- DATA HENTNING ---
 kommuner = {"Hele landet": "000", "København": "101", "Aarhus": "751", "Odense": "461", "Aalborg": "851"}
 
 def hent_data(kode):
@@ -45,6 +44,9 @@ def hent_data(kode):
 
 df = hent_data(kommuner[kommune_navn])
 
-# Hvis DST fejler, bruger vi demodata så appen stadig kan køre
+# Hvis DST driller, brug pæne test-tal uden specialtegn der kan give fejl
 if df is None:
-    st.warning("⚠️ DST server
+    st.warning("Info: DST serveren hviler sig. Vi bruger eksempel-tal lige nu.")
+    df = pd.DataFrame({
+        'Aldersgruppe': ["I alt", "0-6 aar", "7-16 aar", "17-24 aar", "25-44 aar", "45-66 aar", "67+ aar"],
+        'Antal': [6000000, 45000
