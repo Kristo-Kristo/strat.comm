@@ -65,7 +65,7 @@ if prompt := st.chat_input("Skriv dit spørgsmål..."):
             try:
                 # Konfigurer Gemini
                 genai.configure(api_key=google_api_key)
-                model = genai.GenerativeModel('gemini-1.5-flash')
+                model = genai.GenerativeModel('gemini-1.5-flash-latest')
                 
                 # Forbered kontekst (tallene fra DST)
                 data_context = df.to_string() if df is not None else "Ingen data tilgængelig"
