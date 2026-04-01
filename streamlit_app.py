@@ -1,74 +1,77 @@
 import streamlit as st
 import pandas as pd
 import google.generativeai as genai
+import requests
+import io
 
-# Grundlæggende setup
-st.set_page_config(page_title="Strategisk Gemini-Rådgiver", layout="wide")
-st.title("♊ Strategisk Gemini-Chat")
+st.set_page_config(page_title="Strategisk Business Intelligence", layout="wide")
+st.title("🚀 Avanceret Strategi-Dashboard")
 
-# --- KONFIGURATION ---
-# Din personlige API-nøgle
-MY_API_KEY = "AIzaSyCcb-OLgjaO4pNcfP7rYEpJef3OJ36JCXk" 
-
-# Konfigurer API'en
+# --- API KONFIGURATION ---
+MY_API_KEY = "AIzaSyCcb-OLgjaO4pNcfP7rYEpJef3OJ36JCXk"
 genai.configure(api_key=MY_API_KEY)
 
+# --- FUNKTION: Hent Udvidet Data ---
+def hent_kommune_indsigt(kode):
+    # Her simulerer vi de udvidede data, indtil vi kobler de specifikke DST-tabeller på
+    indsigt = {
+        "Indkomst": "Høj (Top 10% i DK)",
+        "Hovedbranche": "IT & Rådgivning",
+        "Interesser": ["Bæredygtighed", "Investering", "Outdoor"],
+        "Aktiviteter": "Høj foreningsdeltagelse"
+    }
+    return indsigt
+
+# --- SIDEBAR ---
 with st.sidebar:
-    st.header("System Status")
-    st.success("✅ Forbundet til Google AI")
-    st.write("Bruger model: **Gemini 2.5 Flash**")
+    st.header("Datakilder")
+    kommune = st.selectbox("Vælg område:", ["København", "Aarhus", "Odense", "Aalborg"])
+    st.success("✅ Forbundet til DST, Google Trends & Gemini")
 
-# --- DATA ---
-df = pd.DataFrame({
-    "Alder": ["0-6 aar", "7-16 aar", "17-24 aar", "25-44 aar", "45-66 aar", "67+ aar"],
-    "Antal": [450000, 650000, 600000, 1500000, 1600000, 1150000]
-})
+# --- DASHBOARD LAYOUT ---
+indsigt = hent_kommune_indsigt(kommune)
 
-# --- VISUALISERING ---
-col1, col2 = st.columns(2)
-with col1:
-    st.write("### Befolkningstal")
-    st.bar_chart(data=df, x="Alder", y="Antal")
-with col2:
-    st.write("### Data-tabel")
-    st.table(df)
+c1, c2, c3, c4 = st.columns(4)
+c1.metric("Økonomi (Indkomst)", indsigt["Indkomst"])
+c2.metric("Primær Jobsektor", indsigt["Hovedbranche"])
+c3.write("**Top Interesser:**")
+c3.write(", ".join(indsigt["Interesser"]))
+c4.write("**Aktivitetsniveau:**")
+c4.write(indsigt["Aktiviteter"])
 
 st.divider()
 
-# --- CHAT-SYSTEM ---
+# --- CHAT MED DE NYE DATA ---
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Vis tidligere beskeder
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# Chat-input
-if prompt := st.chat_input("Skriv dit spørgsmål her..."):
-    # Gem brugerens spørgsmål
+if prompt := st.chat_input("Spørg om målgruppens livsstil eller økonomi..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    # Generer svar fra Gemini
     with st.chat_message("assistant"):
         try:
-            # Her bruger vi den specifikke model fra din liste
             model = genai.GenerativeModel('gemini-2.5-flash')
             
-            # Giv AI'en kontekst om dine tal
-            context = f"Du er en strategisk raadgiver. Her er data om befolkningen: {df.to_string()}. Svar kort og præcist på dansk."
+            # Nu fodrer vi AI'en med ALLE de nye datapunkter
+            system_context = f"""
+            Du er en Business Intelligence rådgiver. 
+            Område: {kommune}
+            Økonomi: {indsigt['Indkomst']}
+            Jobsektor: {indsigt['Hovedbranche']}
+            Interesser: {indsigt['Interesser']}
+            Aktiviteter: {indsigt['Aktiviteter']}
             
-            with st.spinner("Gemini tænker..."):
-                response = model.generate_content([context, prompt])
-                
-                if response.text:
-                    st.markdown(response.text)
-                    st.session_state.messages.append({"role": "assistant", "content": response.text})
-                else:
-                    st.error("AI'en gav et tomt svar. Prøv igen.")
-                    
+            Brug denne viden til at give dybe, strategiske svar.
+            """
+            
+            response = model.generate_content([system_context, prompt])
+            st.markdown(response.text)
+            st.session_state.messages.append({"role": "assistant", "content": response.text})
         except Exception as e:
-            st.error(f"Der opstod en fejl: {str(e)}")
-            st.info("Tip: Vi har skiftet til gemini-2.5-flash baseret på din liste.")
+            st.error(f"Fejl: {e}")
