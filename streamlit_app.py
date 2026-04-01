@@ -7,22 +7,16 @@ st.set_page_config(page_title="Strategisk Gemini-Rådgiver", layout="wide")
 st.title("♊ Strategisk Gemini-Chat")
 
 # --- KONFIGURATION ---
+# Din personlige API-nøgle
 MY_API_KEY = "AIzaSyCcb-OLgjaO4pNcfP7rYEpJef3OJ36JCXk" 
 
-try:
-    genai.configure(api_key=MY_API_KEY)
-    
-    # Hent liste over modeller for at tjekke adgang
-    available_models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
-    
-    with st.sidebar:
-        st.header("System Status")
-        st.success("✅ Forbundet til Google AI")
-        st.write("**Tilgængelige modeller på din konto:**")
-        for m in available_models:
-            st.code(m.replace('models/', ''))
-except Exception as e:
-    st.sidebar.error(f"Kunne ikke hente modeller: {e}")
+# Konfigurer API'en
+genai.configure(api_key=MY_API_KEY)
+
+with st.sidebar:
+    st.header("System Status")
+    st.success("✅ Forbundet til Google AI")
+    st.write("Bruger model: **Gemini 2.5 Flash**")
 
 # --- DATA ---
 df = pd.DataFrame({
@@ -45,28 +39,36 @@ st.divider()
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
+# Vis tidligere beskeder
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
+# Chat-input
 if prompt := st.chat_input("Skriv dit spørgsmål her..."):
+    # Gem brugerens spørgsmål
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
 
+    # Generer svar fra Gemini
     with st.chat_message("assistant"):
         try:
-            # Vi prøver først den mest almindelige model, men uden 'models/' præfiks
-            # Hvis den fejler, prøver vi den første fra din liste over tilgængelige modeller
-            model_name = 'gemini-1.5-flash'
-            model = genai.GenerativeModel(model_name)
+            # Her bruger vi den specifikke model fra din liste
+            model = genai.GenerativeModel('gemini-2.5-flash')
             
-            context = f"Du er en strategisk raadgiver. Data: {df.to_string()}. Svar paa dansk."
+            # Giv AI'en kontekst om dine tal
+            context = f"Du er en strategisk raadgiver. Her er data om befolkningen: {df.to_string()}. Svar kort og præcist på dansk."
             
-            with st.spinner("Gemini analyserer..."):
+            with st.spinner("Gemini tænker..."):
                 response = model.generate_content([context, prompt])
-                st.markdown(response.text)
-                st.session_state.messages.append({"role": "assistant", "content": response.text})
+                
+                if response.text:
+                    st.markdown(response.text)
+                    st.session_state.messages.append({"role": "assistant", "content": response.text})
+                else:
+                    st.error("AI'en gav et tomt svar. Prøv igen.")
+                    
         except Exception as e:
-            st.error(f"Model-fejl: {e}")
-            st.info("Tjek listen i venstre side for at se, hvilke model-navne din konto understøtter.")
+            st.error(f"Der opstod en fejl: {str(e)}")
+            st.info("Tip: Vi har skiftet til gemini-2.5-flash baseret på din liste.")
