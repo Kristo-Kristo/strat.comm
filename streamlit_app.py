@@ -44,10 +44,10 @@ with col1:
 
 with col2:
     st.write("### Strategisk Analyse")
-    st.write("Klik på knappen for at lade AI'en analysere tallene.")
+    st.write("Klik på knappen for at lade maskinen analysere tallene.")
     
-    if st.button("🚀 Generér Kommunikationsstrategi"):
-        with st.spinner('AI'en tænker over tallene...'):
+    if st.button("🚀 Generer Kommunikationsstrategi"):
+        with st.spinner("Analyserer data..."):
             # Find den største gruppe (udover "I alt")
             top_gruppe = df[df['Aldersgruppe'] != 'I alt'].sort_values(by='Antal', ascending=False).iloc[0]
             gruppe_navn = top_gruppe['Aldersgruppe']
@@ -58,9 +58,9 @@ with col2:
             Baseret på data for {kommune_navn}, er din største målgruppe i alderen **{gruppe_navn}**.
             
             **Strategiske anbefalinger:**
-            1. **Kanalvalg:** Da gruppen er {gruppe_navn}, bør du fokusere på {'digitale platforme og korte formater' if '25-44' in gruppe_navn or '17-24' in gruppe_navn else 'traditionelle medier og dybdegående indhold'}.
-            2. **Tone-of-Voice:** Sigt efter en tone der er {'ambitiøs og effektiv' if '25-44' in gruppe_navn else 'tryg og inkluderende'}.
-            3. **Budskab:** Fokusér på {'tidsbesparelse og karriere' if '25-44' in gruppe_navn else 'fællesskab og livskvalitet'}.
+            1. **Kanalvalg:** Da gruppen er {gruppe_navn}, bør du fokusere på {"digitale platforme og korte formater" if "25-44" in gruppe_navn or "17-24" in gruppe_navn else "traditionelle medier og dybdegående indhold"}.
+            2. **Tone-of-Voice:** Sigt efter en tone der er {"ambitiøs og effektiv" if "25-44" in gruppe_navn else "tryg og inkluderende"}.
+            3. **Budskab:** Fokusér på {"tidsbesparelse og karriere" if "25-44" in gruppe_navn else "fællesskab og livskvalitet"}.
             
             *Dette er en automatisk genereret analyse baseret på din demografiske profil.*
             """)
