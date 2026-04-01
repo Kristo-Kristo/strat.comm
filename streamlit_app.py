@@ -8,49 +8,58 @@ st.title("📊 Strategisk Målgruppe-Dashboard")
 st.subheader("Data direkte fra Danmarks Statistik")
 
 def hent_dst_data(kommune_kode="000"):
-    url = "https://api.statbank.dk/v1/data/FOLK1A/JSONSTAT"
+    # Ny URL og mere simpel forespørgsel
+    url = "https://api.statbank.dk/v1/data/FOLK1A/CSV"
     
-    forespørgsel = {
-        "table": "folk1a",
-        "format": "jsonstat",
+    # Vi beder om Alder (IALT + grupper) og Område
+    payload = {
+        "lang": "da",
+        "delimiter": "Semicolon",
         "variables": [
             {"code": "OMRÅDE", "values": [kommune_kode]},
             {"code": "ALDER", "values": ["IALT", "0-6", "7-16", "17-24", "25-44", "45-66", "67+"]}
         ]
     }
     
-    # Vi tilføjer 'headers' for at fortælle DST hvem vi er (standard procedure)
-    headers = {'User-Agent': 'MaalgruppeApp/1.0 (kristokristo@example.com)'}
-    
-    respons = requests.post(url, json=forespørgsel, headers=headers)
+    respons = requests.post(url, json=payload)
     
     if respons.status_code == 200:
-        data = respons.json()
-        # Vi tjekker om 'dataset' findes, ellers kigger vi direkte i json
-        root = data.get('dataset', data) 
-        værdier = root['value']
-        labels = ["I alt", "0-6 år", "7-16 år", "17-24 år", "25-44 år", "45-66 år", "67+ år"]
-        return pd.DataFrame({"Aldersgruppe": labels, "Antal": værdier})
+        # Vi læser svaret som tekst og laver det til en tabel
+        from io import StringIO
+        csv_data = StringIO(respons.text)
+        df = pd.read_csv(csv_data, sep=';')
+        # Vi omdøber kolonnerne så de er pæne
+        df.columns = ['Område', 'Aldersgruppe', 'Tid', 'Antal']
+        return df
     else:
-        st.error(f"Fejl ved hentning: Statuskode {respons.status_code}")
+        st.error(f"Fejl: DST svarede med kode {respons.status_code}")
+        st.info("Tip: Det kan skyldes midlertidig overbelastning hos DST.")
         return None
 
+# Menu
 st.sidebar.header("Indstillinger")
-kommune_navn = st.sidebar.selectbox(
+kommune_valg = st.sidebar.selectbox(
     "Vælg en kommune:",
     ["Hele landet", "København", "Aarhus", "Odense", "Aalborg"]
 )
 
 kommuner = {"Hele landet": "000", "København": "101", "Aarhus": "751", "Odense": "461", "Aalborg": "851"}
-valgt_kode = kommuner[kommune_navn]
+valgt_kode = kommuner[kommune_valg]
 
+# Hent data
 df = hent_dst_data(valgt_kode)
 
 if df is not None:
     col1, col2 = st.columns([1, 2])
+    
     with col1:
-        st.write(f"### Tal for {kommune_navn}")
-        st.table(df)
+        st.write(f"### Tal for {kommune_valg}")
+        # Vis kun Alder og Antal
+        vis_df = df[['Aldersgruppe', 'Antal']]
+        st.table(vis_df)
+        
     with col2:
         st.write("### Visuel fordeling")
-        st.bar_chart(df.set_index("Aldersgruppe").drop("I alt"))
+        # Lav graf uden 'I alt'
+        graf_df = vis_df[vis_df['Aldersgruppe'] != 'I alt']
+        st.bar_chart(data=graf_df, x='Aldersgruppe', y='Antal')
